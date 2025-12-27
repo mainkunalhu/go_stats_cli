@@ -1,13 +1,12 @@
 package scan
 
 import (
-	"bufio"
 	"fmt"
-	"io"
 	"log"
 	"os"
-	"os/user"
 	"strings"
+
+	"mainkunalhu.com/go_stats_cli/internal/helpers"
 )
 
 func scanGitFolders(folders []string, folder string) []string {
@@ -50,42 +49,6 @@ func recursiveScanFolder(folder string) []string {
 	return scanGitFolders(make([]string, 0), folder)
 }
 
-func openFile(filePath string) *os.File {
-	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY, 0755)
-	if err != nil {
-		if os.IsNotExist(err) {
-
-			_, err = os.Create(filePath)
-			if err != nil {
-				panic(err)
-			}
-		} else {
-
-			panic(err)
-		}
-	}
-
-	return f
-}
-
-func parseFileLinesToSlice(filePath string) []string {
-	f := openFile(filePath)
-	defer f.Close()
-
-	var lines []string
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-	if err := scanner.Err(); err != nil {
-		if err != io.EOF {
-			panic(err)
-		}
-	}
-
-	return lines
-}
-
 func joinSlices(new []string, existing []string) []string {
 	for _, i := range new {
 		if !sliceContains(existing, i) {
@@ -110,26 +73,15 @@ func dumpStringsSliceToFile(repos []string, filePath string) {
 }
 
 func addNewSliceElementsToFile(filePath string, newRepos []string) {
-	existingRepos := parseFileLinesToSlice(filePath)
+	existingRepos := helpers.ParseFileLinesToSlice(filePath)
 	repos := joinSlices(newRepos, existingRepos)
 	dumpStringsSliceToFile(repos, filePath)
-}
-
-func getDotFilePath() string {
-	usr, err := user.Current()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	dotFile := usr.HomeDir + "/.gogitlocalstats"
-
-	return dotFile
 }
 
 func Scan(folder string) {
 	fmt.Printf("Found folders:\n\n")
 	repositories := recursiveScanFolder(folder)
-	filePath := getDotFilePath()
+	filePath := helpers.GetDotFilePath()
 	addNewSliceElementsToFile(filePath, repositories)
 	fmt.Printf("\n\nSuccessFully added\n\n")
 }
